@@ -25,5 +25,6 @@ class Detail(scrapy.Item):
     description = scrapy.Field()
     cost = scrapy.Field()
     start_times_detail = scrapy.Field()
+    date = scrapy.Field()
 
 
