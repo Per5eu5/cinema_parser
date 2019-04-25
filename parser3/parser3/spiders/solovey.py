@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import scrapy
-from ..items import Parser3Item
 from ..items import Detail
 from urllib.parse import urljoin
 
@@ -24,14 +23,11 @@ class SoloveySpider(scrapy.Spider):
                                     callback=self.parse_main_page)
 
     def parse_main_page(self, response):
-        items = Parser3Item()
-
         all_films = response.xpath('//div[@class="item"][@style]')
 
         for film in all_films:
-            link = film.xpath('div[@class="description"]/a/@href').extract_first()
-            items['link'] = urljoin(response.url, link)
-            yield scrapy.Request(items['link'], self.parse_detail_page)
+            link = urljoin(response.url, film.xpath('div[@class="description"]/a/@href').extract_first())
+            yield scrapy.Request(link, self.parse_detail_page)
 
     def parse_detail_page(self, response):
         items = Detail()
