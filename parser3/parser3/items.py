@@ -22,9 +22,17 @@ class Parser3Item(scrapy.Item):
 
 
 class Detail(scrapy.Item):
+    title = scrapy.Field()
     description = scrapy.Field()
     cost = scrapy.Field()
-    start_times_detail = scrapy.Field()
     date = scrapy.Field()
+
+    age = scrapy.Field()
+
+    url = scrapy.Field()
+    start_time = scrapy.Field()
+    dimension = scrapy.Field()
+    hall = scrapy.Field()
+    poster = scrapy.Field()
 
 

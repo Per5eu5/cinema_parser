@@ -2,7 +2,7 @@
 import scrapy
 from ..items import Parser3Item
 from ..items import Detail
-import re
+from urllib.parse import urljoin
 
 
 class SoloveySpider(scrapy.Spider):
@@ -26,47 +26,37 @@ class SoloveySpider(scrapy.Spider):
     def parse_main_page(self, response):
         items = Parser3Item()
 
-        current_date = response.xpath('//select[@id="date"]/option[@selected]/text()').extract()
         all_films = response.xpath('//div[@class="item"][@style]')
 
         for film in all_films:
-            title = film.xpath('div[@class="description"]/a/text()').extract_first()
-            age = film.xpath('div[@class="age"]/text()').extract()
-            start_times = film.xpath('div[@class="shows_left"]/a/text()').extract()
-            dimensions = film.xpath('div[@class="d"]/span/text()').extract()
-            halls = film.xpath('div[@class="description"]/div[@class="links"]/div[@class="hall"]/text()').extract()
-            poster = film.xpath('@style').extract_first()
-            link = film.xpath('div[@class="description"]/a[@href]').extract_first()
-            date = current_date
-
-            items['title'] = title.strip()
-            items['age'] = age
-            items['start_times'] = start_times
-            items['dimensions'] = dimensions
-            items['halls'] = halls
-            items['poster'] = "https://kinocenter.ru" + poster.replace("background-image: "
-                                                                          "url('", "").replace("');", "")
-            items['link'] = 'https://kinocenter.ru/repertoire/movie/?movie_id=' + re.findall('[0-9]+', link)[0] +\
-                            '&repertore_start=' + date[0]
-            # ноль потому что возвращается список
-            yield scrapy.Request(items['link'], self.parse_detail_page, meta={'date': date[0]})
-
-            items['date'] = date
-
-            yield items
+            link = film.xpath('div[@class="description"]/a/@href').extract_first()
+            items['link'] = urljoin(response.url, link)
+            yield scrapy.Request(items['link'], self.parse_detail_page)
 
     def parse_detail_page(self, response):
         items = Detail()
 
-        # #description = response.xpath('//div [@class="movie_description"]/div[@class="description"]/text()').extract()
-        cost = response.xpath('//div[@class="cost"]/text()').extract()
-        start_times_detail = response.xpath('//div[@class="time"]/text()').extract()
-        #items["description"] = description
-        items['date'] = response.meta['date']
-        items['start_times_detail'] = start_times_detail
-        items['cost'] = cost
+        items['title'] = response.xpath('//td[@class="title"]/text()').extract_first()
+        items['age'] = response.xpath('//td[@class="age"]/span/text()').extract_first()
+        items['date'] = response.xpath('//input[@id="repertore_start"]/@value').extract_first()
+        items['poster'] = urljoin(response.url, response.xpath('//div[@class="poster"]/img/@src').extract_first())
+        items['url'] = response.url
 
-        yield items
+        # description = response.xpath('//div[@class="movie_description"]/div[@class="description"]/text()').extract()
+        # items["description"] = description
 
+        all_sessions = response.xpath('//a[@class="kh_boxoffice item"]')
 
+        for session in all_sessions:
+            items['cost'] = session.xpath('div[@class="cost"]/text()').extract_first()
+            items['start_time'] = session.xpath('div[@class="time"]/text()').extract_first()
+            items['hall'] = session.xpath('div[@class="hall"]/text()').extract_first()
 
+            dimension = session.xpath('div[@class="d"]/text()').extract_first()
+
+            if dimension is None:
+                items['dimension'] = '2D'
+            else:
+                items['dimension'] = dimension
+
+            yield items
