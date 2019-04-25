@@ -10,24 +10,26 @@ class SoloveySpider(scrapy.Spider):
     start_urls = ['https://kinocenter.ru/repertoire/']
 
     def parse(self, response):
+
         dates_in_schedule = response.xpath('//select[@id="date"]')
         date_in_schedule = dates_in_schedule.xpath('option[@value]/text()').extract()
 
         for i, date in enumerate(date_in_schedule):
             if i == 0:
-                yield scrapy.Request('https://kinocenter.ru/repertoire/', callback=self.parse_main_page)
-            elif i == 1:
-                yield scrapy.Request('https://kinocenter.ru/repertoire/tomorrow.php', callback=self.parse_main_page)
+            #     yield response.follow('https://kinocenter.ru/repertoire/', callback=self.parse_main_page)
+            # elif i == 1:
+                yield response.follow('https://kinocenter.ru/repertoire/tomorrow.php', callback=self.parse_main_page)
             else:
-                yield scrapy.Request('https://kinocenter.ru/repertoire/date.php?date=' + date,
+                yield response.follow('https://kinocenter.ru/repertoire/date.php?date=' + date,
                                     callback=self.parse_main_page)
+
 
     def parse_main_page(self, response):
         all_films = response.xpath('//div[@class="item"][@style]')
 
         for film in all_films:
-            link = urljoin(response.url, film.xpath('div[@class="description"]/a/@href').extract_first())
-            yield scrapy.Request(link, self.parse_detail_page)
+            link = film.xpath('div[@class="description"]/a/@href').extract_first()
+            yield response.follow(link, self.parse_detail_page)
 
     def parse_detail_page(self, response):
         items = Detail()
@@ -56,3 +58,4 @@ class SoloveySpider(scrapy.Spider):
                 items['dimension'] = dimension
 
             yield items
+
